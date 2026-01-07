@@ -186,8 +186,8 @@ Data <- reactive({
   
 
   
-  
-  
+  fit_aov <- aov(Ct ~ dilution + exp, data = myD)
+  sd <- sqrt(summary(fit_aov)[[1]]["Residuals", "Mean Sq"])
   
   mod <-  glmmTMB::glmmTMB(
     Ct ~ dilution + (1|exp),
@@ -217,7 +217,8 @@ Data <- reactive({
     family = gaussian()
   )
   
-  var_df <- var_df %>% rbind(data.frame(dilution = "All",SD =  sigma(mod))) %>% mutate(SD = round(SD, input$decimal))# residual SD
+  var_df <- var_df %>% rbind(data.frame(dilution = "All",SD =  sigma(mod))) %>% rbind(data.frame(dilution = "ANOVA",SD = sd)) %>%
+  mutate(SD = round(SD, input$decimal))# residual SD
 
   
   r <- plot_fits_by_exp_and_overall(mod, myD, level = 0.95, show_ci = TRUE, decimal = input$decimal)
