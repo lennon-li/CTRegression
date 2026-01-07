@@ -204,7 +204,7 @@ Data <- reactive({
   # Make a tidy data.frame
   var_df <- data.frame(
     dilution = names(var_by_dilution),
-    SE = sqrt(as.numeric(var_by_dilution)),
+    SD = sqrt(as.numeric(var_by_dilution)),
     row.names = NULL
   )
   
@@ -217,7 +217,7 @@ Data <- reactive({
     family = gaussian()
   )
   
-  var_df <- var_df %>% rbind(data.frame(dilution = "All",SE =  sigma(mod))) %>% mutate(SE = round(SE, input$decimal))# residual SD
+  var_df <- var_df %>% rbind(data.frame(dilution = "All",SD =  sigma(mod))) %>% mutate(SD = round(SD, input$decimal))# residual SD
 
   
   r <- plot_fits_by_exp_and_overall(mod, myD, level = 0.95, show_ci = TRUE, decimal = input$decimal)
