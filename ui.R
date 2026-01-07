@@ -23,7 +23,8 @@ shinyUI(fluidPage(theme = shinytheme("spacelab"),
            uiOutput("namesY"),
     
            uiOutput("namesD"),
-           uiOutput("expLevels")
+           uiOutput("expLevels"),
+           numericInput("decimal", h5("Decimal places to display:"), 2, min = 0, max = 10)
            #uiOutput("namesCT")
            #checkboxInput("manD", "Use dilution column in the data", FALSE)
            # 

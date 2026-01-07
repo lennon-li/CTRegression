@@ -41,7 +41,8 @@ add_glmmTMB_preds <- function(mod,
                               prefix = "pred_",
                               include_PI   = TRUE,
                               re.form = NA,
-                              allow.new.levels = FALSE) {
+                              allow.new.levels = FALSE, 
+                              decimal = 2) {
   if (is.null(newdata)) {
     newdata <- stats::model.frame(mod)
   }
@@ -63,17 +64,17 @@ add_glmmTMB_preds <- function(mod,
   sigma2 <- sigma^2
   
   # add mean prediction + CI
-  newdata[[paste0(prefix, "mean")]] <- pop$fit
-  newdata[[paste0(prefix, "lwr")]]  <- pop$fit - z * pop$se.fit
-  newdata[[paste0(prefix, "upr")]]  <- pop$fit + z * pop$se.fit
+  newdata[[paste0(prefix, "mean")]] <- round(pop$fit, decimal)
+  newdata[[paste0(prefix, "lwr")]]  <-  round(pop$fit - z * pop$se.fit, decimal)
+  newdata[[paste0(prefix, "upr")]]  <-  round(pop$fit + z * pop$se.fit, decimal)
   
   # optional prediction interval
   if (include_PI) {
     newdata[[paste0(prefix, "pi_lwr")]] <-
-      pop$fit - z * sqrt(pop$se.fit^2 + sigma2)
+      round(pop$fit - z * sqrt(pop$se.fit^2 + sigma2), decimal)
     
     newdata[[paste0(prefix, "pi_upr")]] <-
-      pop$fit + z * sqrt(pop$se.fit^2 + sigma2)
+      round( pop$fit + z * sqrt(pop$se.fit^2 + sigma2), decimal)
   }
   
   newdata
@@ -85,7 +86,8 @@ plot_fits_by_exp_and_overall <- function(mod,
                                         data       = NULL,
                                         level      = 0.95,
                                         show_ci    = TRUE,
-                                        show_points = TRUE) {
+                                        show_points = TRUE,
+                                        decimal = 2) {
   if (is.null(data)) data <- stats::model.frame(mod)
 
   data <- data %>%
@@ -99,7 +101,8 @@ plot_fits_by_exp_and_overall <- function(mod,
     newdata = data,
     prefix = "cond_",
     include_PI = FALSE,
-    re.form = NULL
+    re.form = NULL,
+    decimal = decimal
   )
 
   # overall (population) fits + CI
@@ -109,7 +112,8 @@ plot_fits_by_exp_and_overall <- function(mod,
     newdata = data,
     prefix = "pop_",
     include_PI = FALSE,
-    re.form = NA
+    re.form = NA,
+    decimal
   )
 
   # one row per dilution for the overall line/ribbon
@@ -213,10 +217,10 @@ Data <- reactive({
     family = gaussian()
   )
   
-  var_df <- var_df %>% rbind(data.frame(dilution = "All",SE =  sigma(mod) ))# residual SD
+  var_df <- var_df %>% rbind(data.frame(dilution = "All",SE =  sigma(mod))) %>% mutate(SE = round(SE, input$decimal))# residual SD
 
   
-  r <- plot_fits_by_exp_and_overall(mod, myD, level = 0.95, show_ci = TRUE)
+  r <- plot_fits_by_exp_and_overall(mod, myD, level = 0.95, show_ci = TRUE, decimal = input$decimal)
   
  
   
