@@ -173,8 +173,8 @@ Data <- reactive({
   
   theD = shapeWide(theD)
   myD <- theD %>%
-    select(Ct, dilution = all_of(input$D), exp = all_of(input$Y)) %>%
-    mutate(
+    dplyr::select(Ct, dilution = all_of(input$D), exp = all_of(input$Y)) %>%
+    dplyr::mutate(
       exp  = as.factor(exp),
       dilu = as.factor(dilution)
     )
@@ -189,39 +189,116 @@ Data <- reactive({
   fit_aov <- aov(Ct ~ dilution + exp, data = myD)
   sd <- sqrt(summary(fit_aov)[[1]]["Residuals", "Mean Sq"])
   
-  mod <-  glmmTMB::glmmTMB(
+  mod1 <-  glmmTMB::glmmTMB(
     Ct ~ dilution + (1|exp),
     dispformula = ~ 0 + dilu,
     data    = myD,
     family = gaussian()
   )
-
-  disp <- summary(mod)$coefficients$disp[,1]
-
-  # Convert to actual variances
-  var_by_dilution <- exp(disp)
-
-  # Make a tidy data.frame
-  var_df <- data.frame(
-    dilution = names(var_by_dilution),
-    SD = sqrt(as.numeric(var_by_dilution)),
-    row.names = NULL
-  )
   
   
-  
-  mod <-  glmmTMB::glmmTMB(
+  mod2 <-  glmmTMB::glmmTMB(
     Ct ~ dilution + (1|exp),
     #dispformula = ~ 0 + dilu,
     data    = myD,
     family = gaussian()
   )
   
-  var_df <- var_df %>% rbind(data.frame(dilution = "All",SD =  sigma(mod))) %>% rbind(data.frame(dilution = "ANOVA",SD = sd)) %>%
-  mutate(SD = round(SD, input$decimal))# residual SD
+  
+  get_sd_summary <- function(mod1, mod2) {
+    if (!inherits(mod1, "glmmTMB")) stop("mod1 is not a glmmTMB model.")
+    if (!inherits(mod2, "glmmTMB")) stop("mod2 is not a glmmTMB model.")
+    
+    ## --- per-dilution SD from mod1 (heteroscedastic) ------------------------
+    sm1 <- summary(mod1)
+    if (!"disp" %in% names(sm1$coefficients)) {
+      stop("mod1 has no dispersion component (no `disp` in summary(mod1)$coefficients). ",
+           "Check that you fitted mod1 with `dispformula = ~ 0 + dilu`.")
+    }
+    
+    # dispersion coefficients are on log-variance scale
+    disp_coef <- sm1$coefficients$disp[, 1]
+    var_by_dilution <- exp(disp_coef)
+    
+    dil_labels <- names(var_by_dilution)          # e.g. "dilu1","dilu2",...
+    sd_by_dil   <- sqrt(as.numeric(var_by_dilution))
+    
+    df_dil <- data.frame(
+      label = dil_labels,
+      sd    = sd_by_dil,
+      row.names = NULL,
+      check.names = FALSE
+    )
+    
+    ## --- between / within / total SD from mod2 (mixed model) ---------------
+    vc2 <- glmmTMB::VarCorr(mod2)
+    if (!"cond" %in% names(vc2)) {
+      stop("VarCorr(mod2) has no 'cond' component; unexpected VarCorr structure.")
+    }
+    cond_vc <- vc2$cond
+    
+    if (!"exp" %in% names(cond_vc)) {
+      stop("VarCorr(mod2)$cond has no group 'exp'; check random-effects structure.")
+    }
+    
+    re_exp <- cond_vc$exp
+    between_sd_mixed <- as.numeric(attr(re_exp, "stddev"))[1L]  # inter-experiment SD
+    within_sd_mixed  <- sigma(mod2)                             # intra-experiment SD
+    total_sd_mixed   <- sqrt(between_sd_mixed^2 + within_sd_mixed^2)
+    
+    df_comp <- data.frame(
+      label = c("Intra", "Inter", "Total"),
+      sd    = c(within_sd_mixed, between_sd_mixed, total_sd_mixed),
+      row.names = NULL,
+      check.names = FALSE
+    )
+    
+    ## --- ANOVA-style variance components & SDs ------------------------------
+    # use same data as mod2
+    mf <- model.frame(mod2)   # should contain Ct, dilution, exp
+    
+    lm_mod  <- lm(Ct ~ dilution + exp, data = mf)
+    aov_tab <- anova(lm_mod)
+    
+    MS_between <- aov_tab["exp",       "Mean Sq"]
+    MS_within  <- aov_tab["Residuals", "Mean Sq"]
+    
+    # reps per experiment (for variance component derivation)
+    n_rep_by_exp <- table(mf$exp)
+    k_vec <- as.numeric(n_rep_by_exp)
+    
+    if (length(unique(k_vec)) != 1L) {
+      warning("Design is not perfectly balanced; ANOVA variance components are approximate.")
+    }
+    k <- mean(k_vec)  # use average reps if unbalanced
+    
+    # ANOVA variance components: between & within
+    sigma2_within_anova  <- MS_within
+    sigma2_between_anova <- (MS_between - MS_within) / k
+    sigma2_between_anova <- max(sigma2_between_anova, 0)  # guard against small negative
+    
+    sd_within_anova  <- sqrt(sigma2_within_anova)
+    sd_between_anova <- sqrt(sigma2_between_anova)
+    sd_total_anova   <- sqrt(sigma2_within_anova + sigma2_between_anova)
+    
+    df_anova <- data.frame(
+      label = c("ANOVA_between", "ANOVA_within", "ANOVA_total"),
+      sd    = c(sd_between_anova, sd_within_anova, sd_total_anova),
+      row.names = NULL,
+      check.names = FALSE
+    )
+    
+    ## --- combine everything --------------------------------------------------
+    rbind(df_dil, df_comp, df_anova)
+  }
+  
+  
+  
+  
+  var_df <- get_sd_summary(mod1, mod2) %>% mutate(sd = round(sd, input$decimal))
 
   
-  r <- plot_fits_by_exp_and_overall(mod, myD, level = 0.95, show_ci = TRUE, decimal = input$decimal)
+  r <- plot_fits_by_exp_and_overall(mod2, myD, level = 0.95, show_ci = TRUE, decimal = input$decimal)
   
  
   
