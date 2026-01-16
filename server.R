@@ -247,7 +247,7 @@ Data <- reactive({
     total_sd_mixed   <- sqrt(between_sd_mixed^2 + within_sd_mixed^2)
     
     df_comp <- data.frame(
-      label = c("Intra", "Inter", "Total"),
+      label = c("Mixed_Intra", "Mixed_Inter", "Mixed_Total"),
       sd    = c(within_sd_mixed, between_sd_mixed, total_sd_mixed),
       row.names = NULL,
       check.names = FALSE
