@@ -75,12 +75,22 @@ shinyUI(
                     "with experiments (runs/plates) included as a random effect."
                   ),
                   
+                  h5("Sample data"),
+                  p(
+                    "You can download a sample data file here: ",
+                    tags$a(
+                      href   = "testWide.xlsx",  # file in ./www
+                      "data.xlsx",
+                      target = "_blank"
+                    )
+                  ),
+                  
                   h4("Statistical model"),
                   p(
                     "The main model is a Gaussian mixed model of the form ",
-                    tags$code("Ct ~ dilution + (1 | exp)"),
+                    code("Ct ~ dilution + (1 | exp)"),
                     ", fitted with ",
-                    tags$code("glmmTMB"),
+                    code("glmmTMB"),
                     "."
                   ),
                   tags$ul(
@@ -96,9 +106,9 @@ shinyUI(
                   ),
                   p(
                     "In one version of the model, a dispersion formula ",
-                    tags$code("dispformula = ~ 0 + dilu"),
-                    " is used so that the residual variance can differ by dilution.",
-                    " In the simpler model without a dispersion formula, a single residual variance is assumed across all dilutions."
+                    code("dispformula = ~ 0 + dilu"),
+                    " is used so that the residual variance can differ by dilution. ",
+                    "In the simpler model without a dispersion formula, a single residual variance is assumed across all dilutions."
                   ),
                   
                   h4("Interpretation of the SDs shown in the app"),
@@ -109,7 +119,7 @@ shinyUI(
                     tags$li(
                       strong("dilu1, dilu2, …: "),
                       "these SDs come from the model with ",
-                      tags$code("dispformula = ~ 0 + dilu"),
+                      code("dispformula = ~ 0 + dilu"),
                       ". ",
                       "Each value represents the residual SD of Ct for that specific dilution, ",
                       "after adjusting for the fixed effect of dilution and the experiment random effect. ",
@@ -120,32 +130,32 @@ shinyUI(
                   h5("Mixed-model SDs (from glmmTMB without dispersion model)"),
                   tags$ul(
                     tags$li(
-                      strong("intra: "),
-                      "the within-experiment (residual) SD from the homogeneous-variance mixed model. ",
-                      "It reflects repeatability: how much individual Ct values vary around the fitted mean within the same experiment."
+                      strong("mixed_intra: "),
+                      "within-experiment (residual) SD from the homogeneous-variance mixed model. ",
+                      "This reflects repeatability: how much individual Ct values vary around the fitted mean within the same experiment."
                     ),
                     tags$li(
-                      strong("inter: "),
-                      "the between-experiment SD (random intercept SD for ",
-                      tags$code("exp"),
+                      strong("mixed_inter: "),
+                      "between-experiment SD (random intercept SD for ",
+                      code("exp"),
                       "). ",
                       "This describes how much experiment-level baselines differ from run to run."
                     ),
                     tags$li(
-                      strong("total: "),
-                      "the combined SD for a new Ct measurement when you do not know which experiment it will come from. ",
+                      strong("mixed_total: "),
+                      "combined SD for a new Ct measurement when you do not know which experiment it will come from. ",
                       "It is computed as ",
-                      HTML("&#8730;(intra<sup>2</sup> + inter<sup>2</sup>).")
+                      HTML("&#8730;(mixed_intra<sup>2</sup> + mixed_inter<sup>2</sup>).")
                     )
                   ),
                   
                   h5("ANOVA-based SDs (fixed-effects view)"),
                   p(
                     "For comparison, an ordinary linear model ",
-                    tags$code("lm(Ct ~ dilution + exp)"),
+                    code("lm(Ct ~ dilution + exp)"),
                     " is also fitted and an ANOVA table is used to derive variance components, ",
                     "treating ",
-                    tags$code("exp"),
+                    code("exp"),
                     " as if it were a random factor in a classical ANOVA framework."
                   ),
                   tags$ul(
@@ -153,25 +163,25 @@ shinyUI(
                       strong("ANOVA_within: "),
                       "square root of the residual mean square from the ANOVA. ",
                       "This is the within-experiment SD in the fixed-effects view and is comparable to ",
-                      tags$code("intra"),
+                      code("mixed_intra"),
                       "."
                     ),
                     tags$li(
                       strong("ANOVA_between: "),
-                      "an ANOVA-based estimate of the between-experiment SD, ",
-                      "derived from the difference between the experiment mean square and the residual mean square ",
-                      "using the expected mean squares approach (assuming a roughly balanced design). ",
-                      "This is conceptually comparable to ",
-                      tags$code("inter"),
+                      "ANOVA-based estimate of the between-experiment SD, ",
+                      "derived from the difference between the experiment mean square and the residual mean square, ",
+                      "scaled by the number of replicates per experiment (using the expected mean squares approach). ",
+                      "Conceptually comparable to ",
+                      code("mixed_inter"),
                       ", though estimated in a different way."
                     ),
                     tags$li(
                       strong("ANOVA_total: "),
-                      "the total SD combining ANOVA_between and ANOVA_within, ",
+                      "total SD combining ANOVA_between and ANOVA_within, ",
                       "computed as ",
                       HTML("&#8730;(ANOVA_between<sup>2</sup> + ANOVA_within<sup>2</sup>). "),
                       "This is the ANOVA analogue of ",
-                      tags$code("total"),
+                      code("mixed_total"),
                       "."
                     )
                   ),
@@ -183,15 +193,15 @@ shinyUI(
                       "tell you how variable Ct is at each dilution level."
                     ),
                     tags$li(
-                      strong("intra / ANOVA_within: "),
+                      strong("mixed_intra / ANOVA_within: "),
                       "repeatability: variation of Ct within the same experiment/run."
                     ),
                     tags$li(
-                      strong("inter / ANOVA_between: "),
+                      strong("mixed_inter / ANOVA_between: "),
                       "reproducibility across experiments: how much runs/plates differ in their baseline Ct."
                     ),
                     tags$li(
-                      strong("total / ANOVA_total: "),
+                      strong("mixed_total / ANOVA_total: "),
                       "overall measurement uncertainty for a single new Ct value in routine use, ",
                       "combining both within- and between-experiment variation."
                     )
